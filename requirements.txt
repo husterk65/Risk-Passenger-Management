@@ -1,3 +1,5 @@
 PyQt6
 supabase
 python-dotenv
+pandas
+openpyxl
