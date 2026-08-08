@@ -3,32 +3,45 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QFormLayout,
     QLineEdit,
-    QTextEdit,
     QComboBox,
-    QCheckBox,
-    QPushButton,
-    QHBoxLayout
+    QDateEdit,
+    QDialogButtonBox,
+    QSpinBox,
 )
+
+from PyQt6.QtCore import QDate
 
 from models.risk_profile import RiskProfile
 
 
 class RiskProfileDialog(QDialog):
 
-    def __init__(self, profile: RiskProfile | None = None, parent=None):
+    def __init__(
+        self,
+        profile=None,
+        parent=None
+    ):
 
         super().__init__(parent)
 
         self.profile = profile
 
-        self.setWindowTitle("Risk Profile")
+        self.setWindowTitle(
+            "Edit Risk Profile"
+            if profile
+            else "Add Risk Profile"
+        )
 
-        self.resize(500, 550)
+        self.setMinimumWidth(500)
 
         self.init_ui()
 
         if self.profile:
-            self.load_data()
+            self.load_profile()
+
+    # ==================================================
+    # UI
+    # ==================================================
 
     def init_ui(self):
 
@@ -36,127 +49,377 @@ class RiskProfileDialog(QDialog):
 
         form = QFormLayout()
 
-        self.txt_name = QLineEdit()
+        # ----------------------------------------------
+        # Full Name
+        # ----------------------------------------------
 
-        self.txt_passport = QLineEdit()
+        self.full_name_edit = QLineEdit()
 
-        self.txt_nationality = QLineEdit()
-
-        self.txt_dob = QLineEdit()
-        self.txt_dob.setPlaceholderText("YYYY-MM-DD")
-
-        self.cbo_gender = QComboBox()
-        self.cbo_gender.addItems(
-            [
-                "",
-                "Male",
-                "Female"
-            ]
+        form.addRow(
+            "Full Name:",
+            self.full_name_edit
         )
 
-        self.cbo_risk = QComboBox()
-        self.cbo_risk.addItems(
-            [
-                "Low",
-                "Medium",
-                "High"
-            ]
+        # ----------------------------------------------
+        # Passport
+        # ----------------------------------------------
+
+        self.passport_edit = QLineEdit()
+
+        form.addRow(
+            "Passport Number:",
+            self.passport_edit
         )
 
-        self.txt_reason = QTextEdit()
+        # ----------------------------------------------
+        # Nationality
+        # ----------------------------------------------
 
-        self.txt_reason.setFixedHeight(70)
+        self.nationality_edit = QLineEdit()
 
-        self.txt_remark = QTextEdit()
+        form.addRow(
+            "Nationality:",
+            self.nationality_edit
+        )
 
-        self.txt_remark.setFixedHeight(70)
+        # ----------------------------------------------
+        # Date of Birth
+        # ----------------------------------------------
 
-        self.chk_active = QCheckBox()
+        self.dob_edit = QDateEdit()
 
-        self.chk_active.setChecked(True)
+        self.dob_edit.setCalendarPopup(True)
 
-        form.addRow("Full Name", self.txt_name)
+        self.dob_edit.setDisplayFormat(
+            "yyyy-MM-dd"
+        )
 
-        form.addRow("Passport", self.txt_passport)
+        self.dob_edit.setDate(
+            QDate.currentDate()
+        )
 
-        form.addRow("Nationality", self.txt_nationality)
+        form.addRow(
+            "Date of Birth:",
+            self.dob_edit
+        )
 
-        form.addRow("Date Of Birth", self.txt_dob)
+        # ----------------------------------------------
+        # Gender
+        # ----------------------------------------------
 
-        form.addRow("Gender", self.cbo_gender)
+        self.gender_combo = QComboBox()
 
-        form.addRow("Risk Level", self.cbo_risk)
+        self.gender_combo.addItems([
+            "",
+            "Male",
+            "Female",
+            "Other"
+        ])
 
-        form.addRow("Risk Reason", self.txt_reason)
+        form.addRow(
+            "Gender:",
+            self.gender_combo
+        )
 
-        form.addRow("Remarks", self.txt_remark)
+        # ----------------------------------------------
+        # Flight Count
+        # ----------------------------------------------
 
-        form.addRow("Active", self.chk_active)
+        self.flight_count_spin = QSpinBox()
+
+        self.flight_count_spin.setMinimum(0)
+
+        self.flight_count_spin.setMaximum(
+            999999
+        )
+
+        form.addRow(
+            "Flight Count:",
+            self.flight_count_spin
+        )
+
+        # ----------------------------------------------
+        # Baggage Card Count
+        # ----------------------------------------------
+
+        self.baggage_card_count_spin = QSpinBox()
+
+        self.baggage_card_count_spin.setMinimum(0)
+
+        self.baggage_card_count_spin.setMaximum(
+            999999
+        )
+
+        form.addRow(
+            "Baggage Cards:",
+            self.baggage_card_count_spin
+        )
+
+        # ----------------------------------------------
+        # Destination Airport
+        # ----------------------------------------------
+
+        self.destination_airport_edit = QLineEdit()
+
+        form.addRow(
+            "Destination Airport:",
+            self.destination_airport_edit
+        )
+
+        # ----------------------------------------------
+        # Risk Level
+        # ----------------------------------------------
+
+        self.risk_level_combo = QComboBox()
+
+        self.risk_level_combo.addItems([
+            "Low",
+            "Medium",
+            "High",
+            "Critical"
+        ])
+
+        form.addRow(
+            "Risk Level:",
+            self.risk_level_combo
+        )
+
+        # ----------------------------------------------
+        # Risk Reason
+        # ----------------------------------------------
+
+        self.risk_reason_edit = QLineEdit()
+
+        form.addRow(
+            "Risk Reason:",
+            self.risk_reason_edit
+        )
+
+        # ----------------------------------------------
+        # Remarks
+        # ----------------------------------------------
+
+        self.remarks_edit = QLineEdit()
+
+        form.addRow(
+            "Remarks:",
+            self.remarks_edit
+        )
+
+        # ----------------------------------------------
+        # Active
+        # ----------------------------------------------
+
+        self.active_combo = QComboBox()
+
+        self.active_combo.addItem(
+            "Yes",
+            True
+        )
+
+        self.active_combo.addItem(
+            "No",
+            False
+        )
+
+        form.addRow(
+            "Active:",
+            self.active_combo
+        )
 
         layout.addLayout(form)
 
-        buttons = QHBoxLayout()
+        # ----------------------------------------------
+        # Buttons
+        # ----------------------------------------------
 
-        buttons.addStretch()
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok
+            | QDialogButtonBox.StandardButton.Cancel
+        )
 
-        self.btn_save = QPushButton("Save")
+        buttons.accepted.connect(
+            self.accept
+        )
 
-        self.btn_cancel = QPushButton("Cancel")
+        buttons.rejected.connect(
+            self.reject
+        )
 
-        buttons.addWidget(self.btn_save)
-
-        buttons.addWidget(self.btn_cancel)
-
-        layout.addLayout(buttons)
+        layout.addWidget(buttons)
 
         self.setLayout(layout)
 
-        self.btn_cancel.clicked.connect(self.reject)
+    # ==================================================
+    # LOAD PROFILE
+    # ==================================================
 
-        self.btn_save.clicked.connect(self.accept)
+    def load_profile(self):
 
-    def load_data(self):
+        self.full_name_edit.setText(
+            self.profile.full_name or ""
+        )
 
-        self.txt_name.setText(self.profile.full_name)
+        self.passport_edit.setText(
+            self.profile.passport_number or ""
+        )
 
-        self.txt_passport.setText(self.profile.passport_number)
+        self.nationality_edit.setText(
+            self.profile.nationality or ""
+        )
 
-        self.txt_nationality.setText(self.profile.nationality)
+        # Date
+        dob = QDate.fromString(
+            self.profile.date_of_birth or "",
+            "yyyy-MM-dd"
+        )
 
-        self.txt_dob.setText(self.profile.date_of_birth)
+        if dob.isValid():
+            self.dob_edit.setDate(dob)
+        else:
+            self.dob_edit.setDate(
+                QDate.currentDate()
+            )
 
-        self.cbo_gender.setCurrentText(self.profile.gender)
+        # Gender
+        gender_index = self.gender_combo.findText(
+            self.profile.gender or ""
+        )
 
-        self.cbo_risk.setCurrentText(self.profile.risk_level)
+        if gender_index >= 0:
+            self.gender_combo.setCurrentIndex(
+                gender_index
+            )
 
-        self.txt_reason.setPlainText(self.profile.risk_reason)
+        # Flight count
+        self.flight_count_spin.setValue(
+            self.profile.flight_count or 0
+        )
 
-        self.txt_remark.setPlainText(self.profile.remarks)
+        # Baggage cards
+        self.baggage_card_count_spin.setValue(
+            self.profile.baggage_card_count or 0
+        )
 
-        self.chk_active.setChecked(self.profile.active)
+        # Destination
+        self.destination_airport_edit.setText(
+            self.profile.destination_airport or ""
+        )
+
+        # Risk level
+        risk_index = self.risk_level_combo.findText(
+            self.profile.risk_level or "Low"
+        )
+
+        if risk_index >= 0:
+            self.risk_level_combo.setCurrentIndex(
+                risk_index
+            )
+
+        # Risk reason
+        self.risk_reason_edit.setText(
+            self.profile.risk_reason or ""
+        )
+
+        # Remarks
+        self.remarks_edit.setText(
+            self.profile.remarks or ""
+        )
+
+        # Active
+        active_index = self.active_combo.findData(
+            self.profile.active
+        )
+
+        if active_index >= 0:
+            self.active_combo.setCurrentIndex(
+                active_index
+            )
+
+    # ==================================================
+    # GET PROFILE
+    # ==================================================
 
     def get_profile(self):
 
-        if self.profile is None:
+        return RiskProfile(
 
-            self.profile = RiskProfile()
+            id=(
+                self.profile.id
+                if self.profile
+                else None
+            ),
 
-        self.profile.full_name = self.txt_name.text().strip()
+            full_name=(
+                self.full_name_edit
+                .text()
+                .strip()
+            ),
 
-        self.profile.passport_number = self.txt_passport.text().strip()
+            passport_number=(
+                self.passport_edit
+                .text()
+                .strip()
+            ),
 
-        self.profile.nationality = self.txt_nationality.text().strip()
+            nationality=(
+                self.nationality_edit
+                .text()
+                .strip()
+            ),
 
-        self.profile.date_of_birth = self.txt_dob.text().strip()
+            date_of_birth=(
+                self.dob_edit
+                .date()
+                .toString("yyyy-MM-dd")
+            ),
 
-        self.profile.gender = self.cbo_gender.currentText()
+            gender=(
+                self.gender_combo
+                .currentText()
+            ),
 
-        self.profile.risk_level = self.cbo_risk.currentText()
+            flight_count=(
+                self.flight_count_spin
+                .value()
+            ),
 
-        self.profile.risk_reason = self.txt_reason.toPlainText().strip()
+            baggage_card_count=(
+                self.baggage_card_count_spin
+                .value()
+            ),
 
-        self.profile.remarks = self.txt_remark.toPlainText().strip()
+            destination_airport=(
+                self.destination_airport_edit
+                .text()
+                .strip()
+            ),
 
-        self.profile.active = self.chk_active.isChecked()
+            risk_level=(
+                self.risk_level_combo
+                .currentText()
+            ),
 
-        return self.profile
+            risk_reason=(
+                self.risk_reason_edit
+                .text()
+                .strip()
+            ),
+
+            remarks=(
+                self.remarks_edit
+                .text()
+                .strip()
+            ),
+
+            active=(
+                self.active_combo
+                .currentData()
+            ),
+
+            created_at=(
+                self.profile.created_at
+                if self.profile
+                else ""
+            )
+        )

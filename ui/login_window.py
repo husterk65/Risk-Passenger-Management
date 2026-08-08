@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QMessageBox,
 )
-
+import traceback
 from services.auth_service import AuthService
 
 
@@ -63,7 +63,7 @@ class LoginWindow(QWidget):
             self.close()
 
         else:
-
+            traceback.print_exc()
             QMessageBox.warning(
                 self,
                 "Login",

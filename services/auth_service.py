@@ -11,6 +11,11 @@ class AuthService:
 
         user = UserService.find_by_username(username)
 
+        print("========== LOGIN DEBUG ==========")
+        print("user type:", type(user))
+        print("user:", user)
+        print("=================================")
+
         if user is None:
             return None
 

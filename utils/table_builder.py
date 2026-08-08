@@ -7,31 +7,45 @@ class TableBuilder:
 
         model.clear()
 
-        headers = [
+        # ==========================
+        # Headers
+        # ==========================
+
+        headers = ["STT"] + [
             column["title"]
             for column in columns
         ]
 
         model.setHorizontalHeaderLabels(headers)
 
-        for obj in objects:
+        # ==========================
+        # Rows
+        # ==========================
 
-            row = []
+        for row_index, obj in enumerate(objects, start=1):
 
-            for column in columns:
+            # STT
+            model.setItem(
+                row_index - 1,
+                0,
+                QStandardItem(str(row_index))
+            )
 
-                field = column["field"]
+            # Data
+            for column_index, column in enumerate(columns, start=1):
 
-                value = getattr(obj, field, "")
-
-                if value is None:
-                    value = ""
-
-                if isinstance(value, bool):
-                    value = "Yes" if value else "No"
-
-                row.append(
-                    QStandardItem(str(value))
+                value = getattr(
+                    obj,
+                    column["field"],
+                    ""
                 )
 
-            model.appendRow(row)
+                item = QStandardItem(
+                    "" if value is None else str(value)
+                )
+
+                model.setItem(
+                    row_index - 1,
+                    column_index,
+                    item
+                )
