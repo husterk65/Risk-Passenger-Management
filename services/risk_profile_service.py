@@ -77,6 +77,37 @@ class RiskProfileService:
         )
 
     # ==================================================
+    # CREATE MANY
+    # ==================================================
+
+    @staticmethod
+    def create_many(profiles: list[RiskProfile]):
+
+        if not profiles:
+            return []
+
+        client = SupabaseService.get_client()
+
+        data = [
+            profile.to_dict()
+            for profile in profiles
+        ]
+
+        response = (
+            client
+            .table(RiskProfileService.TABLE_NAME)
+            .insert(data)
+            .execute()
+        )
+
+        if not response.data:
+            return []
+
+        return [
+            RiskProfile.from_dict(row)
+            for row in response.data
+        ]
+    # ==================================================
     # UPDATE
     # ==================================================
 
