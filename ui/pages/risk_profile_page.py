@@ -19,12 +19,14 @@ from PyQt6.QtWidgets import (
     QDialog,
     QFrame,
     QHeaderView,
+    QFileDialog,
 )
 
 from services.risk_profile_service import RiskProfileService
 from ui.dialogs.risk_profile_dialog import RiskProfileDialog
 from utils.column_config import RISK_PROFILE_COLUMNS
 from utils.table_builder import TableBuilder
+from utils.excel_service import ExcelService
 
 class RiskProfilePage(QWidget):
 
@@ -231,7 +233,7 @@ class RiskProfilePage(QWidget):
         self.setLayout(root)
 
         self.btn_refresh.clicked.connect(self.refresh)
-        self.btn_import.clicked.connect(self.import_profiles)
+        self.btn_import.clicked.connect(self.import_excel)
         self.search_box.textChanged.connect(self.search)
         self.btn_add.clicked.connect(self.add_profile)
         self.btn_delete.clicked.connect(self.delete_profile)
@@ -364,11 +366,6 @@ class RiskProfilePage(QWidget):
         profile = self.get_selected_profile()
 
         if profile is None:
-            QMessageBox.information(
-                self,
-                "Notice",
-                "Please select a profile to edit."
-            )
             return
 
         dialog = RiskProfileDialog(
@@ -381,27 +378,45 @@ class RiskProfilePage(QWidget):
 
         updated_profile = dialog.get_profile()
 
-        try:
+        # ==========================================
+        # Check duplicate passport
+        # ==========================================
 
-            RiskProfileService.update(
-                updated_profile
-            )
+        existing_profiles = RiskProfileService.get_all()
 
-            self.load_data()
+        passport = (
+            updated_profile.passport_number
+            .strip()
+            .upper()
+        )
 
-            QMessageBox.information(
-                self,
-                "Success",
-                "Risk profile updated successfully."
-            )
+        for existing in existing_profiles:
 
-        except Exception as e:
+            # Skip the record currently being edited
+            if existing.id == updated_profile.id:
+                continue
 
-            QMessageBox.critical(
-                self,
-                "Error",
-                str(e)
-            )
+            if (
+                existing.passport_number
+                and existing.passport_number.strip().upper()
+                == passport
+            ):
+                QMessageBox.warning(
+                    self,
+                    "Validation Error",
+                    "Passport Number already exists."
+                )
+                return
+
+        # ==========================================
+        # Update
+        # ==========================================
+
+        RiskProfileService.update(
+            updated_profile
+        )
+
+        self.load_data()
 
     def populate_table(self, profiles):
 
@@ -427,5 +442,139 @@ class RiskProfilePage(QWidget):
 
         self.load_data()
 
-    def import_profiles(self):
-        pass  # Placeholder for the import functionality, to be implemented later
+    def import_excel(self):
+
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Select Excel File",
+            "",
+            "Excel Files (*.xlsx *.xls)"
+        )
+
+        if not file_path:
+            return
+
+        try:
+
+            profiles = ExcelService.read_risk_profiles(
+                file_path
+            )
+
+            if not profiles:
+
+                QMessageBox.information(
+                    self,
+                    "Import",
+                    "No valid records found in the Excel file."
+                )
+
+                return
+
+            # ------------------------------------------
+            # Check duplicate passports
+            # ------------------------------------------
+
+            existing_profiles = (
+                RiskProfileService.get_all()
+            )
+
+            existing_passports = {
+                profile.passport_number.strip().upper()
+                for profile in existing_profiles
+                if profile.passport_number
+            }
+
+            new_profiles = []
+            duplicate_count = 0
+
+            for profile in profiles:
+
+                passport = (
+                    profile.passport_number
+                    .strip()
+                    .upper()
+                )
+
+                if passport in existing_passports:
+
+                    duplicate_count += 1
+
+                    continue
+
+                new_profiles.append(profile)
+
+            # ------------------------------------------
+            # Nothing new
+            # ------------------------------------------
+
+            if not new_profiles:
+
+                QMessageBox.information(
+                    self,
+                    "Import",
+                    (
+                        f"Found {len(profiles)} record(s).\n\n"
+                        f"Existing: {duplicate_count}\n"
+                        f"New: 0"
+                    )
+                )
+
+                return
+
+            # ------------------------------------------
+            # Confirm
+            # ------------------------------------------
+
+            message = (
+                f"Import {len(new_profiles)} new record(s)?\n\n"
+                f"Total rows: {len(profiles)}\n"
+                f"New: {len(new_profiles)}\n"
+                f"Existing: {duplicate_count}"
+            )
+
+            result = QMessageBox.question(
+                self,
+                "Confirm Import",
+                message,
+                QMessageBox.StandardButton.Yes
+                | QMessageBox.StandardButton.No
+            )
+
+            if result != QMessageBox.StandardButton.Yes:
+                return
+
+            # ------------------------------------------
+            # Insert
+            # ------------------------------------------
+
+            created_profiles = (
+                RiskProfileService.create_many(
+                    new_profiles
+                )
+            )
+
+            success_count = len(created_profiles)
+
+            # ------------------------------------------
+            # Refresh
+            # ------------------------------------------
+
+            self.load_data()
+
+            QMessageBox.information(
+                self,
+                "Import Complete",
+                (
+                    f"Import completed successfully.\n\n"
+                    f"Imported: {success_count}\n"
+                    f"Skipped: {duplicate_count}"
+                )
+            )
+
+        except Exception as e:
+
+            QMessageBox.critical(
+                self,
+                "Import Error",
+                str(e)
+            )

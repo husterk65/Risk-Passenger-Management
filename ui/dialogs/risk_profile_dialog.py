@@ -7,6 +7,7 @@ from PyQt6.QtWidgets import (
     QDateEdit,
     QDialogButtonBox,
     QSpinBox,
+    QMessageBox,
 )
 
 from PyQt6.QtCore import QDate
@@ -239,7 +240,7 @@ class RiskProfileDialog(QDialog):
         )
 
         buttons.accepted.connect(
-            self.accept
+            self.validate_and_accept
         )
 
         buttons.rejected.connect(
@@ -423,3 +424,87 @@ class RiskProfileDialog(QDialog):
                 else ""
             )
         )
+
+    def validate_and_accept(self):
+
+        full_name = self.full_name_edit.text().strip()
+        passport = self.passport_edit.text().strip()
+        nationality = self.nationality_edit.text().strip()
+
+        # ==========================================
+        # Required fields
+        # ==========================================
+
+        if not full_name:
+
+            QMessageBox.warning(
+                self,
+                "Validation Error",
+                "Full Name is required."
+            )
+
+            self.full_name_edit.setFocus()
+
+            return
+
+        if not passport:
+
+            QMessageBox.warning(
+                self,
+                "Validation Error",
+                "Passport Number is required."
+            )
+
+            self.passport_edit.setFocus()
+
+            return
+
+        if not nationality:
+
+            QMessageBox.warning(
+                self,
+                "Validation Error",
+                "Nationality is required."
+            )
+
+            self.nationality_edit.setFocus()
+
+            return
+
+        # ==========================================
+        # Gender
+        # ==========================================
+
+        if not self.gender_combo.currentText():
+
+            QMessageBox.warning(
+                self,
+                "Validation Error",
+                "Please select Gender."
+            )
+
+            self.gender_combo.setFocus()
+
+            return
+
+        # ==========================================
+        # Risk Level
+        # ==========================================
+
+        if not self.risk_level_combo.currentText():
+
+            QMessageBox.warning(
+                self,
+                "Validation Error",
+                "Please select Risk Level."
+            )
+
+            self.risk_level_combo.setFocus()
+
+            return
+
+        # ==========================================
+        # All valid
+        # ==========================================
+
+        self.accept()
