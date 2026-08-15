@@ -80,6 +80,14 @@ FLIGHT_COLUMNS = [
 
 FLIGHT_PASSENGER_COLUMNS = [
     {
+        "field": "row_index",
+        "title": "STT",
+    },
+    {
+        "field": "seat_number",
+        "title": "Seat",
+    },
+    {
         "field": "full_name",
         "title": "Full Name",
     },
@@ -104,8 +112,12 @@ FLIGHT_PASSENGER_COLUMNS = [
         "title": "Document Number",
     },
     {
-        "field": "seat_number",
-        "title": "Seat",
+        "field": "issuing_country",
+        "title": "Issuing Country",
+    },
+    {
+        "field": "residence_country",
+        "title": "Residence",
     },
     {
         "field": "origin",
@@ -116,8 +128,16 @@ FLIGHT_PASSENGER_COLUMNS = [
         "title": "Destination",
     },
     {
+        "field": "first_airport",
+        "title": "First Airport",
+    },
+    {
         "field": "baggage_count",
         "title": "Baggage",
+    },
+    {
+        "field": "document_expiry_date",
+        "title": "Document Expiry",
     },
 ]
 
