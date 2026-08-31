@@ -570,3 +570,35 @@ class ExcelService:
             gender,
             gender
         )
+        
+    # ==================================================
+    # EXPORT RISK ALERTS
+    # ==================================================
+
+    @staticmethod
+    def export_risk_alerts(
+        alerts: list,
+        file_path: str
+    ):
+        data = []
+
+        for alert in alerts:
+            data.append({
+                "Flight": alert.flight_number,
+                "Full Name": alert.full_name,
+                "Passport": alert.passport_number,
+                "Nationality": alert.nationality,
+                "Date of Birth": alert.date_of_birth,
+                "Gender": alert.gender,
+                "Risk Level": alert.risk_level,
+                "Risk Reason": alert.risk_reason,
+                "Checked At": alert.created_at,
+            })
+
+        df = pd.DataFrame(data)
+
+        df.to_excel(
+            file_path,
+            index=False,
+            sheet_name="Risk Alerts"
+        )

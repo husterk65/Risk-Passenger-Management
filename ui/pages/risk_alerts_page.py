@@ -1,28 +1,201 @@
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
     QWidget,
     QVBoxLayout,
     QHBoxLayout,
     QLabel,
-    QComboBox,
     QLineEdit,
     QTableWidget,
     QTableWidgetItem,
     QHeaderView,
     QFrame,
+    QPushButton,
+    QCheckBox,
+    QFileDialog,
+    QMessageBox,
 )
 
+from utils.excel_service import ExcelService
+
+
+# =============================================================
+# FLIGHT FILTER POPUP
+# =============================================================
+
+class FlightFilterPopup(QFrame):
+
+    def __init__(self, parent=None):
+        super().__init__(
+            parent,
+            Qt.WindowType.Popup
+        )
+
+        self.setObjectName("FlightFilterPopup")
+
+        self.setMinimumWidth(220)
+
+        self.layout = QVBoxLayout(self)
+        self.layout.setContentsMargins(
+            12,
+            12,
+            12,
+            12
+        )
+        self.layout.setSpacing(6)
+
+        # -----------------------------------------------------
+        # Title
+        # -----------------------------------------------------
+
+        title = QLabel("Flight")
+        title.setObjectName("PopupTitle")
+
+        self.layout.addWidget(title)
+
+        # -----------------------------------------------------
+        # All flights
+        # -----------------------------------------------------
+
+        self.all_checkbox = QCheckBox("All Flights")
+        self.all_checkbox.setChecked(True)
+
+        self.layout.addWidget(
+            self.all_checkbox
+        )
+
+        self.layout.addSpacing(4)
+
+        # -----------------------------------------------------
+        # Flight checkboxes
+        # -----------------------------------------------------
+
+        self.flight_checkboxes = []
+
+        self.all_checkbox.stateChanged.connect(
+            self._on_all_changed
+        )
+
+    # =========================================================
+    # SET FLIGHTS
+    # =========================================================
+
+    def set_flights(self, flights):
+
+        # Remove old checkboxes
+
+        for checkbox in self.flight_checkboxes:
+            self.layout.removeWidget(
+                checkbox
+            )
+            checkbox.deleteLater()
+
+        self.flight_checkboxes.clear()
+
+        # Add new flights
+
+        for flight_id, flight_number in flights:
+
+            checkbox = QCheckBox(
+                str(flight_number)
+            )
+
+            checkbox.setProperty(
+                "flight_id",
+                flight_id
+            )
+
+            checkbox.stateChanged.connect(
+                self._on_flight_changed
+            )
+
+            self.flight_checkboxes.append(
+                checkbox
+            )
+
+            self.layout.addWidget(
+                checkbox
+            )
+
+    # =========================================================
+    # ALL CHANGED
+    # =========================================================
+
+    def _on_all_changed(self, state):
+
+        if state == Qt.CheckState.Checked.value:
+
+            for checkbox in self.flight_checkboxes:
+
+                checkbox.blockSignals(True)
+                checkbox.setChecked(False)
+                checkbox.blockSignals(False)
+
+        self._emit_changed()
+
+    # =========================================================
+    # FLIGHT CHANGED
+    # =========================================================
+
+    def _on_flight_changed(self, state):
+
+        checked = [
+            checkbox
+            for checkbox in self.flight_checkboxes
+            if checkbox.isChecked()
+        ]
+
+        self.all_checkbox.blockSignals(True)
+
+        if checked:
+            self.all_checkbox.setChecked(False)
+        else:
+            self.all_checkbox.setChecked(True)
+
+        self.all_checkbox.blockSignals(False)
+
+        self._emit_changed()
+
+    # =========================================================
+    # SELECTED FLIGHTS
+    # =========================================================
+
+    def selected_flight_ids(self):
+
+        if self.all_checkbox.isChecked():
+            return None
+
+        return [
+            checkbox.property("flight_id")
+            for checkbox in self.flight_checkboxes
+            if checkbox.isChecked()
+        ]
+
+    # =========================================================
+    # CHANGE CALLBACK
+    # =========================================================
+
+    def _emit_changed(self):
+
+        parent = self.parent()
+
+        if parent is not None:
+            parent.refresh_table()
+
+
+# =============================================================
+# RISK ALERTS PAGE
+# =============================================================
 
 class RiskAlertsPage(QWidget):
 
-    def __init__(
-        self,
-        alert_store
-    ):
+    def __init__(self, alert_store):
 
         super().__init__()
 
         self.alert_store = alert_store
+
+        self.flight_filter_popup = None
 
         self.init_ui()
 
@@ -34,9 +207,7 @@ class RiskAlertsPage(QWidget):
 
     def init_ui(self):
 
-        layout = QVBoxLayout(
-            self
-        )
+        layout = QVBoxLayout(self)
 
         layout.setContentsMargins(
             20,
@@ -45,9 +216,7 @@ class RiskAlertsPage(QWidget):
             20
         )
 
-        layout.setSpacing(
-            16
-        )
+        layout.setSpacing(16)
 
         # =====================================================
         # HEADER
@@ -57,13 +226,7 @@ class RiskAlertsPage(QWidget):
 
         title_layout = QVBoxLayout()
 
-        title_layout.setSpacing(
-            2
-        )
-
-        # -----------------------------------------------------
-        # Title
-        # -----------------------------------------------------
+        title_layout.setSpacing(2)
 
         title = QLabel(
             "Risk Alerts"
@@ -73,10 +236,6 @@ class RiskAlertsPage(QWidget):
             "PageTitle"
         )
 
-        # -----------------------------------------------------
-        # Subtitle
-        # -----------------------------------------------------
-
         subtitle = QLabel(
             "Review passengers identified during risk checks."
         )
@@ -85,19 +244,62 @@ class RiskAlertsPage(QWidget):
             "PageSubtitle"
         )
 
-        title_layout.addWidget(
-            title
-        )
-
-        title_layout.addWidget(
-            subtitle
-        )
+        title_layout.addWidget(title)
+        title_layout.addWidget(subtitle)
 
         header_layout.addLayout(
             title_layout
         )
 
         header_layout.addStretch()
+
+        # -----------------------------------------------------
+        # Export Excel
+        # -----------------------------------------------------
+
+        self.export_excel_button = QPushButton(
+            "Export Excel"
+        )
+
+        self.export_excel_button.setObjectName(
+            "ExportButton"
+        )
+
+        self.export_excel_button.setMinimumHeight(
+            38
+        )
+
+        self.export_excel_button.clicked.connect(
+            self.export_excel
+        )
+
+        header_layout.addWidget(
+            self.export_excel_button
+        )
+
+        # -----------------------------------------------------
+        # Export PDF
+        # -----------------------------------------------------
+
+        self.export_pdf_button = QPushButton(
+            "Export PDF"
+        )
+
+        self.export_pdf_button.setObjectName(
+            "ExportButton"
+        )
+
+        self.export_pdf_button.setMinimumHeight(
+            38
+        )
+
+        self.export_pdf_button.clicked.connect(
+            self.export_pdf
+        )
+
+        header_layout.addWidget(
+            self.export_pdf_button
+        )
 
         layout.addLayout(
             header_layout
@@ -124,9 +326,7 @@ class RiskAlertsPage(QWidget):
             14
         )
 
-        filter_layout.setSpacing(
-            10
-        )
+        filter_layout.setSpacing(10)
 
         # -----------------------------------------------------
         # Flight
@@ -144,31 +344,31 @@ class RiskAlertsPage(QWidget):
             flight_label
         )
 
-        self.flight_filter = QComboBox()
-
-        self.flight_filter.setObjectName(
-            "FilterCombo"
+        self.flight_filter_button = QPushButton(
+            "All Flights"
         )
 
-        self.flight_filter.setMinimumWidth(
+        self.flight_filter_button.setObjectName(
+            "FilterButton"
+        )
+
+        self.flight_filter_button.setMinimumWidth(
             220
         )
 
-        self.flight_filter.setMinimumHeight(
+        self.flight_filter_button.setMinimumHeight(
             38
         )
 
-        self.flight_filter.currentIndexChanged.connect(
-            self.refresh_table
+        self.flight_filter_button.clicked.connect(
+            self.open_flight_filter
         )
 
         filter_layout.addWidget(
-            self.flight_filter
+            self.flight_filter_button
         )
 
-        filter_layout.addSpacing(
-            14
-        )
+        filter_layout.addSpacing(14)
 
         # -----------------------------------------------------
         # Search
@@ -239,10 +439,6 @@ class RiskAlertsPage(QWidget):
             12
         )
 
-        # -----------------------------------------------------
-        # Alert icon / indicator
-        # -----------------------------------------------------
-
         indicator = QFrame()
 
         indicator.setObjectName(
@@ -260,9 +456,7 @@ class RiskAlertsPage(QWidget):
 
         summary_text_layout = QVBoxLayout()
 
-        summary_text_layout.setSpacing(
-            0
-        )
+        summary_text_layout.setSpacing(0)
 
         summary_title = QLabel(
             "Risk Alerts"
@@ -319,9 +513,7 @@ class RiskAlertsPage(QWidget):
             0
         )
 
-        table_layout.setSpacing(
-            0
-        )
+        table_layout.setSpacing(0)
 
         # -----------------------------------------------------
         # Table
@@ -333,9 +525,7 @@ class RiskAlertsPage(QWidget):
             "RiskAlertTable"
         )
 
-        self.table.setColumnCount(
-            9
-        )
+        self.table.setColumnCount(9)
 
         self.table.setHorizontalHeaderLabels([
             "Flight",
@@ -377,9 +567,7 @@ class RiskAlertsPage(QWidget):
             False
         )
 
-        header = (
-            self.table.horizontalHeader()
-        )
+        header = self.table.horizontalHeader()
 
         header.setMinimumHeight(
             42
@@ -391,7 +579,9 @@ class RiskAlertsPage(QWidget):
             Qt.AlignmentFlag.AlignVCenter
         )
 
-        # Các cột cố định theo nội dung
+        # -----------------------------------------------------
+        # Column sizing
+        # -----------------------------------------------------
 
         for column in range(
             self.table.columnCount()
@@ -401,8 +591,6 @@ class RiskAlertsPage(QWidget):
                 column,
                 QHeaderView.ResizeMode.ResizeToContents
             )
-
-        # Risk reason chiếm phần còn lại
 
         header.setSectionResizeMode(
             7,
@@ -438,9 +626,7 @@ class RiskAlertsPage(QWidget):
             45
         )
 
-        empty_layout.setSpacing(
-            8
-        )
+        empty_layout.setSpacing(8)
 
         empty_icon = QLabel(
             "✓"
@@ -468,7 +654,7 @@ class RiskAlertsPage(QWidget):
 
         empty_subtitle = QLabel(
             "No passengers have been flagged "
-            "for the selected flight."
+            "for the selected filter."
         )
 
         empty_subtitle.setObjectName(
@@ -495,7 +681,6 @@ class RiskAlertsPage(QWidget):
             self.empty_state
         )
 
-        # Ban đầu table / empty state được điều khiển
         self.empty_state.hide()
 
         # =====================================================
@@ -503,11 +688,6 @@ class RiskAlertsPage(QWidget):
         # =====================================================
 
         self.setStyleSheet("""
-
-        /* =================================================
-           PAGE HEADER
-           ================================================= */
-
         QLabel#PageTitle {
             font-size: 30px;
             font-weight: 700;
@@ -519,21 +699,11 @@ class RiskAlertsPage(QWidget):
             color: #64748b;
         }
 
-
-        /* =================================================
-           CARD
-           ================================================= */
-
         QFrame#Card {
             background: #ffffff;
             border: 1px solid #dbe3ef;
             border-radius: 12px;
         }
-
-
-        /* =================================================
-           FILTER
-           ================================================= */
 
         QLabel#FilterLabel {
             font-size: 13px;
@@ -541,25 +711,35 @@ class RiskAlertsPage(QWidget):
             color: #334155;
         }
 
-        QComboBox#FilterCombo {
+        QPushButton#FilterButton {
             background: #ffffff;
             border: 1px solid #cbd5e1;
             border-radius: 7px;
-            padding: 0 10px;
+            padding: 0 12px;
             color: #0f172a;
+            text-align: left;
         }
 
-        QComboBox#FilterCombo:hover {
+        QPushButton#FilterButton:hover {
             border: 1px solid #94a3b8;
         }
 
-        QComboBox#FilterCombo:focus {
-            border: 1px solid #2563eb;
+        QPushButton#FilterButton:pressed {
+            background: #f8fafc;
         }
 
-        QComboBox#FilterCombo::drop-down {
-            border: none;
-            width: 28px;
+        QPushButton#ExportButton {
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 7px;
+            padding: 0 14px;
+            color: #0f172a;
+            font-weight: 600;
+        }
+
+        QPushButton#ExportButton:hover {
+            background: #f8fafc;
+            border: 1px solid #94a3b8;
         }
 
         QLineEdit#SearchBox {
@@ -578,10 +758,23 @@ class RiskAlertsPage(QWidget):
             border: 1px solid #2563eb;
         }
 
+        QFrame#FlightFilterPopup {
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+        }
 
-        /* =================================================
-           SUMMARY
-           ================================================= */
+        QLabel#PopupTitle {
+            font-size: 13px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        QCheckBox {
+            font-size: 13px;
+            color: #334155;
+            padding: 4px;
+        }
 
         QFrame#SummaryCard {
             background: #ffffff;
@@ -605,11 +798,6 @@ class RiskAlertsPage(QWidget):
             font-weight: 700;
             color: #0f172a;
         }
-
-
-        /* =================================================
-           TABLE
-           ================================================= */
 
         QTableWidget#RiskAlertTable {
             background: #ffffff;
@@ -641,11 +829,6 @@ class RiskAlertsPage(QWidget):
             color: #0f172a;
         }
 
-
-        /* =================================================
-           EMPTY STATE
-           ================================================= */
-
         QFrame#EmptyState {
             background: #ffffff;
             border: 1px solid #dbe3ef;
@@ -668,7 +851,6 @@ class RiskAlertsPage(QWidget):
             font-size: 13px;
             color: #64748b;
         }
-
         """)
 
     # =========================================================
@@ -687,105 +869,103 @@ class RiskAlertsPage(QWidget):
 
     def refresh_flight_filter(self):
 
-        current_value = (
-            self.flight_filter.currentData()
-        )
-
-        self.flight_filter.blockSignals(
-            True
-        )
-
-        self.flight_filter.clear()
-
-        # -----------------------------------------------------
-        # All flights
-        # -----------------------------------------------------
-
-        self.flight_filter.addItem(
-            "All Flights",
-            None
-        )
-
-        # -----------------------------------------------------
-        # Get flights from runtime alerts
-        # -----------------------------------------------------
+        alerts = self.alert_store.get_all()
 
         flights = {}
 
-        for alert in (
-            self.alert_store.get_all()
-        ):
+        for alert in alerts:
 
             flights[
                 alert.flight_id
             ] = alert.flight_number
 
-        # -----------------------------------------------------
-        # Add flights
-        # -----------------------------------------------------
+        # Create popup
 
-        for flight_id, flight_number in sorted(
-            flights.items(),
-            key=lambda x: x[1]
-        ):
-
-            self.flight_filter.addItem(
-                flight_number,
-                flight_id
-            )
-
-        # -----------------------------------------------------
-        # Restore previous selection
-        # -----------------------------------------------------
-
-        if current_value is not None:
-
-            index = (
-                self.flight_filter.findData(
-                    current_value
-                )
-            )
-
-            if index >= 0:
-
-                self.flight_filter.setCurrentIndex(
-                    index
-                )
-
-        self.flight_filter.blockSignals(
-            False
+        self.flight_filter_popup = FlightFilterPopup(
+            self
         )
 
+        sorted_flights = sorted(
+            flights.items(),
+            key=lambda x: str(
+                x[1]
+            ).upper()
+        )
+
+        self.flight_filter_popup.set_flights(
+            sorted_flights
+        )
+
+        self.flight_filter_popup.adjustSize()
+
     # =========================================================
-    # TABLE
+    # OPEN FLIGHT FILTER
     # =========================================================
 
-    def refresh_table(self):
+    def open_flight_filter(self):
 
-        alerts = (
+        if self.flight_filter_popup is None:
+            self.refresh_flight_filter()
+
+        # Position popup below button
+
+        position = (
+            self.flight_filter_button
+            .mapToGlobal(
+                self.flight_filter_button.rect().bottomLeft()
+            )
+        )
+
+        self.flight_filter_popup.move(
+            position
+        )
+
+        # IMPORTANT:
+        # This is a QWidget/QFrame popup,
+        # NOT a QDialog.
+        #
+        # Therefore:
+        # DO NOT use popup.exec()
+
+        self.flight_filter_popup.show()
+
+        self.flight_filter_popup.raise_()
+
+        self.flight_filter_popup.activateWindow()
+
+    # =========================================================
+    # GET FILTERED ALERTS
+    # =========================================================
+
+    def get_filtered_alerts(self):
+
+        alerts = list(
             self.alert_store.get_all()
         )
 
-        # =====================================================
-        # FLIGHT FILTER
-        # =====================================================
+        # -----------------------------------------------------
+        # Flight filter
+        # -----------------------------------------------------
 
-        selected_flight_id = (
-            self.flight_filter.currentData()
-        )
+        if self.flight_filter_popup is not None:
 
-        if selected_flight_id is not None:
+            selected_ids = (
+                self.flight_filter_popup
+                .selected_flight_ids()
+            )
 
-            alerts = [
-                alert
-                for alert in alerts
-                if alert.flight_id
-                == selected_flight_id
-            ]
+            if selected_ids is not None:
 
-        # =====================================================
-        # SEARCH
-        # =====================================================
+                alerts = [
+                    alert
+                    for alert in alerts
+                    if alert.flight_id
+                    in selected_ids
+                ]
+
+        # -----------------------------------------------------
+        # Search
+        # -----------------------------------------------------
 
         keyword = (
             self.search_box
@@ -797,11 +977,8 @@ class RiskAlertsPage(QWidget):
         if keyword:
 
             alerts = [
-
                 alert
-
                 for alert in alerts
-
                 if (
                     keyword
                     in (
@@ -827,17 +1004,95 @@ class RiskAlertsPage(QWidget):
                 )
             ]
 
-        # =====================================================
-        # SUMMARY
-        # =====================================================
+        return alerts
+
+    # =========================================================
+    # UPDATE FILTER BUTTON TEXT
+    # =========================================================
+
+    def update_filter_button(self):
+
+        if self.flight_filter_popup is None:
+
+            self.flight_filter_button.setText(
+                "All Flights"
+            )
+
+            return
+
+        selected_ids = (
+            self.flight_filter_popup
+            .selected_flight_ids()
+        )
+
+        if selected_ids is None:
+
+            self.flight_filter_button.setText(
+                "All Flights"
+            )
+
+            return
+
+        if not selected_ids:
+
+            self.flight_filter_button.setText(
+                "All Flights"
+            )
+
+            return
+
+        if len(selected_ids) == 1:
+
+            for checkbox in (
+                self.flight_filter_popup
+                .flight_checkboxes
+            ):
+
+                if (
+                    checkbox.property(
+                        "flight_id"
+                    )
+                    ==
+                    selected_ids[0]
+                ):
+
+                    self.flight_filter_button.setText(
+                        checkbox.text()
+                    )
+
+                    return
+
+        self.flight_filter_button.setText(
+            f"{len(selected_ids)} Flights Selected"
+        )
+
+    # =========================================================
+    # TABLE
+    # =========================================================
+
+    def refresh_table(self):
+
+        if not hasattr(
+            self,
+            "table"
+        ):
+            return
+
+        self.update_filter_button()
+
+        alerts = self.get_filtered_alerts()
+
+        # -----------------------------------------------------
+        # Summary
+        # -----------------------------------------------------
 
         self.summary_label.setText(
             f"{len(alerts)} alert(s)"
         )
 
-        # =====================================================
-        # EMPTY STATE
-        # =====================================================
+        # -----------------------------------------------------
+        # Empty state
+        # -----------------------------------------------------
 
         if not alerts:
 
@@ -851,9 +1106,9 @@ class RiskAlertsPage(QWidget):
 
         self.table.show()
 
-        # =====================================================
-        # TABLE DATA
-        # =====================================================
+        # -----------------------------------------------------
+        # Table rows
+        # -----------------------------------------------------
 
         self.table.setRowCount(
             len(alerts)
@@ -864,23 +1119,14 @@ class RiskAlertsPage(QWidget):
         ):
 
             values = [
-
                 alert.flight_number,
-
                 alert.full_name,
-
                 alert.passport_number,
-
                 alert.nationality,
-
                 alert.date_of_birth,
-
                 alert.gender,
-
                 alert.risk_level,
-
                 alert.risk_reason,
-
                 alert.created_at,
             ]
 
@@ -907,9 +1153,9 @@ class RiskAlertsPage(QWidget):
                     item
                 )
 
-            # =================================================
-            # RISK LEVEL
-            # =================================================
+            # -------------------------------------------------
+            # Risk level
+            # -------------------------------------------------
 
             risk_level = (
                 str(
@@ -920,11 +1166,9 @@ class RiskAlertsPage(QWidget):
                 .upper()
             )
 
-            risk_item = (
-                self.table.item(
-                    row_index,
-                    6
-                )
+            risk_item = self.table.item(
+                row_index,
+                6
             )
 
             if risk_item:
@@ -936,7 +1180,7 @@ class RiskAlertsPage(QWidget):
                     )
 
                     risk_item.setForeground(
-                        Qt.GlobalColor.darkRed
+                        QColor("#dc2626")
                     )
 
                 elif risk_level == "MEDIUM":
@@ -946,7 +1190,7 @@ class RiskAlertsPage(QWidget):
                     )
 
                     risk_item.setForeground(
-                        Qt.GlobalColor.darkYellow
+                        QColor("#d97706")
                     )
 
                 elif risk_level == "LOW":
@@ -956,18 +1200,112 @@ class RiskAlertsPage(QWidget):
                     )
 
                     risk_item.setForeground(
-                        Qt.GlobalColor.darkGreen
+                        QColor("#16a34a")
                     )
 
-        # =====================================================
-        # ROW HEIGHT
-        # =====================================================
-
-        for row in range(
-            self.table.rowCount()
-        ):
+            # -------------------------------------------------
+            # Row height
+            # -------------------------------------------------
 
             self.table.setRowHeight(
-                row,
+                row_index,
                 42
+            )
+
+    # =========================================================
+    # EXPORT EXCEL
+    # =========================================================
+
+    def export_excel(self):
+
+        alerts = self.get_filtered_alerts()
+
+        if not alerts:
+
+            QMessageBox.information(
+                self,
+                "Export Excel",
+                "Không có dữ liệu để xuất."
+            )
+
+            return
+
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Export Risk Alerts",
+            "risk_alerts.xlsx",
+            "Excel Files (*.xlsx)"
+        )
+
+        if not file_path:
+            return
+
+        try:
+
+            ExcelService.export_risk_alerts(
+                alerts,
+                file_path
+            )
+
+            QMessageBox.information(
+                self,
+                "Export Excel",
+                "Xuất danh sách rủi ro thành công."
+            )
+
+        except Exception as e:
+
+            QMessageBox.critical(
+                self,
+                "Export Excel",
+                f"Không thể xuất Excel:\n\n{e}"
+            )
+
+    # =========================================================
+    # EXPORT PDF
+    # =========================================================
+
+    def export_pdf(self):
+
+        alerts = self.get_filtered_alerts()
+
+        if not alerts:
+
+            QMessageBox.information(
+                self,
+                "Export PDF",
+                "Không có dữ liệu để xuất."
+            )
+
+            return
+
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Export Risk Alerts",
+            "risk_alerts.pdf",
+            "PDF Files (*.pdf)"
+        )
+
+        if not file_path:
+            return
+
+        try:
+
+            ExcelService.export_risk_alerts_pdf(
+                alerts,
+                file_path
+            )
+
+            QMessageBox.information(
+                self,
+                "Export PDF",
+                "Xuất danh sách rủi ro thành công."
+            )
+
+        except Exception as e:
+
+            QMessageBox.critical(
+                self,
+                "Export PDF",
+                f"Không thể xuất PDF:\n\n{e}"
             )
