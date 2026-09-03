@@ -62,6 +62,8 @@ class FlightsPage(QWidget):
 
         self.passengers = []
 
+        self.passengers_by_flight = {}
+
         # =====================================================
         # UI
         # =====================================================
@@ -411,6 +413,10 @@ class FlightsPage(QWidget):
             True
         )
 
+        self.passenger_table.verticalHeader().setVisible(
+            False
+        )
+
         self.passenger_table.horizontalHeader().setStretchLastSection(
             False
         )
@@ -487,6 +493,9 @@ class FlightsPage(QWidget):
             border-radius: 7px;
             padding: 9px;
             background: #ffffff;
+            color: #0f172a;
+            selection-color: #0f172a;
+            selection-background-color: #dbeafe;
         }
 
         QLineEdit:focus {
@@ -527,9 +536,11 @@ class FlightsPage(QWidget):
         QListWidget#FlightList {
             border: none;
             background: transparent;
+            color: #0f172a;
         }
 
         QListWidget#FlightList::item {
+            color: #0f172a;
             padding: 12px;
             margin-bottom: 6px;
             border-radius: 8px;
@@ -545,9 +556,29 @@ class FlightsPage(QWidget):
         }
 
         QTableView#PassengerTable {
-            border: 1px solid #dbe3ef;
-            gridline-color: #e2e8f0;
-            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            gridline-color: #f1f5f9;
+            background: #ffffff;
+            color: #0f172a;
+        }
+
+        QTableView#PassengerTable::item {
+            background: #ffffff;
+            color: #0f172a;
+        }
+
+        QTableView#PassengerTable::item:alternate {
+            background: #f8fafc;
+        }
+
+        QTableView#PassengerTable QHeaderView::section {
+            background: #f8fafc;
+            color: #334155;
+            border: none;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 8px;
+            font-weight: 600;
         }
 
         """)
@@ -769,12 +800,15 @@ class FlightsPage(QWidget):
 
         try:
 
-            self.passengers = (
-                FlightPassengerService
-                .get_by_flight(
-                    flight.id
+            if flight.id not in self.passengers_by_flight:
+                self.passengers_by_flight[flight.id] = (
+                    FlightPassengerService
+                    .get_by_flight(
+                        flight.id
+                    )
                 )
-            )
+
+            self.passengers = self.passengers_by_flight[flight.id]
 
             self.passenger_count.setText(
                 f"{len(self.passengers)} passenger(s)"

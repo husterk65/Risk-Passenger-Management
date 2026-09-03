@@ -126,6 +126,7 @@ class RiskProfilePage(QWidget):
             }
             QTableView {
                 background: white;
+                color: #0f172a;
                 border: 1px solid #e2e8f0;
                 border-radius: 12px;
                 gridline-color: #f1f5f9;
@@ -140,6 +141,7 @@ class RiskProfilePage(QWidget):
                 font-weight: 600;
             }
             QTableView::item {
+                color: #0f172a;
                 padding: 8px;
                 border: none;
             }
@@ -419,7 +421,6 @@ class RiskProfilePage(QWidget):
         self.load_data()
 
     def populate_table(self, profiles):
-
         self.profiles = profiles
 
         TableBuilder.build(
@@ -427,6 +428,24 @@ class RiskProfilePage(QWidget):
             objects=self.profiles,
             columns=RISK_PROFILE_COLUMNS
         )
+
+        print("========== TABLE DEBUG ==========")
+        print("profiles:", len(profiles))
+        print("model rows:", self.model.rowCount())
+        print("model columns:", self.model.columnCount())
+        print("proxy rows:", self.proxy_model.rowCount())
+        print("proxy columns:", self.proxy_model.columnCount())
+
+        if self.model.rowCount() > 0:
+            print(
+                "cell[0,0]:",
+                self.model.item(0, 0).text()
+            )
+
+            print(
+                "cell[0,1]:",
+                self.model.item(0, 1).text()
+            )
 
         self.table.resizeColumnsToContents()
 

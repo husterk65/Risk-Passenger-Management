@@ -262,7 +262,7 @@ class RiskAlertsPage(QWidget):
         )
 
         self.export_excel_button.setObjectName(
-            "ExportButton"
+            "ExportExcelButton"
         )
 
         self.export_excel_button.setMinimumHeight(
@@ -286,7 +286,7 @@ class RiskAlertsPage(QWidget):
         )
 
         self.export_pdf_button.setObjectName(
-            "ExportButton"
+            "ExportPdfButton"
         )
 
         self.export_pdf_button.setMinimumHeight(
@@ -728,18 +728,32 @@ class RiskAlertsPage(QWidget):
             background: #f8fafc;
         }
 
-        QPushButton#ExportButton {
-            background: #ffffff;
-            border: 1px solid #cbd5e1;
+        QPushButton#ExportExcelButton {
+            background: #ecfdf3;
+            border: 1px solid #bbf7d0;
             border-radius: 7px;
             padding: 0 14px;
-            color: #0f172a;
+            color: #15803d;
             font-weight: 600;
         }
 
-        QPushButton#ExportButton:hover {
-            background: #f8fafc;
-            border: 1px solid #94a3b8;
+        QPushButton#ExportExcelButton:hover {
+            background: #dcfce7;
+            border: 1px solid #86efac;
+        }
+
+        QPushButton#ExportPdfButton {
+            background: #fff1f2;
+            border: 1px solid #fecdd3;
+            border-radius: 7px;
+            padding: 0 14px;
+            color: #be123c;
+            font-weight: 600;
+        }
+
+        QPushButton#ExportPdfButton:hover {
+            background: #ffe4e6;
+            border: 1px solid #fda4af;
         }
 
         QLineEdit#SearchBox {
@@ -821,6 +835,7 @@ class RiskAlertsPage(QWidget):
 
         QTableWidget::item {
             border-bottom: 1px solid #f1f5f9;
+            color: #0f172a;
             padding: 8px;
         }
 
