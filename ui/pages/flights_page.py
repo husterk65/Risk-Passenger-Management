@@ -22,6 +22,7 @@ from PyQt6.QtGui import (
 )
 
 from services.flight_service import FlightService
+from services.audit_log_service import AuditLogService
 from services.flight_passenger_service import FlightPassengerService
 from services.risk_check_service import RiskCheckService
 
@@ -32,7 +33,8 @@ class FlightsPage(QWidget):
 
     def __init__(
         self,
-        risk_alert_store
+        risk_alert_store,
+        current_user
     ):
 
         super().__init__()
@@ -44,6 +46,8 @@ class FlightsPage(QWidget):
         self.risk_alert_store = (
             risk_alert_store
         )
+        
+        self.current_user = current_user
 
         # Risk check service dùng chung runtime store
         self.risk_check_service = (
@@ -952,6 +956,18 @@ class FlightsPage(QWidget):
                     f"{result.passenger_count}"
                 )
             )
+            
+            AuditLogService.log(
+                user_id=self.current_user.id,
+                username=self.current_user.username,
+                action="IMPORT",
+                module="Flights",
+                details=(
+                    f"Imported flight "
+                    f"{result.flight.flight_number} "
+                    f"with {result.passenger_count} passenger(s)"
+                )
+            )
 
         except Exception as e:
 
@@ -1061,6 +1077,17 @@ class FlightsPage(QWidget):
 
                     f"Total alerts in this session: "
                     f"{total_alert_count}"
+                )
+            )
+            
+            AuditLogService.log(
+                user_id=self.current_user.id,
+                username=self.current_user.username,
+                action="RISK_CHECK",
+                module="Risk Check",
+                details=(
+                    f"Risk check completed for "
+                    f"{self.current_flight.flight_number}"
                 )
             )
 

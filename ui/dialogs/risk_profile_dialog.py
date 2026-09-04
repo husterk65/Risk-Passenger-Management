@@ -251,6 +251,75 @@ class RiskProfileDialog(QDialog):
 
         self.setLayout(layout)
 
+        self.setStyleSheet("""
+            QDialog {
+                background: #f8fafc;
+                color: #0f172a;
+            }
+            QLabel {
+                color: #334155;
+                font-size: 12px;
+                font-weight: 600;
+            }
+            QLineEdit,
+            QComboBox,
+            QDateEdit,
+            QSpinBox {
+                background: #ffffff;
+                color: #0f172a;
+                border: 1px solid #cbd5e1;
+                border-radius: 7px;
+                padding: 7px 10px;
+                min-height: 28px;
+            }
+            QLineEdit:focus,
+            QComboBox:focus,
+            QDateEdit:focus,
+            QSpinBox:focus {
+                border: 1px solid #60a5fa;
+                background: #f8fbff;
+            }
+            QComboBox QAbstractItemView {
+                background: #ffffff;
+                color: #0f172a;
+                selection-background-color: #dbeafe;
+                selection-color: #1d4ed8;
+            }
+            QDateEdit::drop-down,
+            QComboBox::drop-down {
+                border: none;
+                width: 26px;
+            }
+            QSpinBox::up-button,
+            QSpinBox::down-button {
+                background: #f1f5f9;
+                border: none;
+                width: 20px;
+            }
+            QDialogButtonBox QPushButton {
+                min-width: 78px;
+                min-height: 32px;
+                padding: 6px 14px;
+                border-radius: 7px;
+                border: 1px solid #cbd5e1;
+                background: #ffffff;
+                color: #334155;
+                font-weight: 600;
+            }
+            QDialogButtonBox QPushButton:hover {
+                background: #f1f5f9;
+            }
+            QDialogButtonBox QPushButton[text="OK"] {
+                background: #2563eb;
+                border: 1px solid #2563eb;
+                color: #ffffff;
+            }
+            QDialogButtonBox QPushButton[text="OK"]:hover {
+                background: #1d4ed8;
+                border: 1px solid #1d4ed8;
+            }
+        """)
+
     # ==================================================
     # LOAD PROFILE
     # ==================================================

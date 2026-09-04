@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import (
 )
 
 from services.risk_profile_service import RiskProfileService
+from services.audit_log_service import AuditLogService
 from ui.dialogs.risk_profile_dialog import RiskProfileDialog
 from utils.column_config import RISK_PROFILE_COLUMNS
 from utils.table_builder import TableBuilder
@@ -30,9 +31,10 @@ from utils.excel_service import ExcelService
 
 class RiskProfilePage(QWidget):
 
-    def __init__(self):
+    def __init__(self, current_user):
 
         super().__init__()
+        self.current_user = current_user
 
         self.model = QStandardItemModel()
 
@@ -282,6 +284,14 @@ class RiskProfilePage(QWidget):
                 profile
             )
 
+            AuditLogService.log(
+                user_id=self.current_user.id,
+                username=self.current_user.username,
+                action="ADD",
+                module="Risk Profiles",
+                details=f"Added risk profile: {profile.full_name}"
+            )
+
             self.load_data()
 
             QMessageBox.information(
@@ -346,7 +356,13 @@ class RiskProfilePage(QWidget):
             RiskProfileService.delete(
                 profile.id
             )
-
+            AuditLogService.log(
+                user_id=self.current_user.id,
+                username=self.current_user.username,
+                action="DELETE",
+                module="Risk Profiles",
+                details=f"Deleted risk profile: {profile.full_name}"
+            )
             QMessageBox.information(
                 self,
                 "Success",
@@ -416,6 +432,13 @@ class RiskProfilePage(QWidget):
 
         RiskProfileService.update(
             updated_profile
+        )
+        AuditLogService.log(
+            user_id=self.current_user.id,
+            username=self.current_user.username,
+            action="EDIT",
+            module="Risk Profiles",
+            details=f"Updated risk profile: {updated_profile.full_name}"
         )
 
         self.load_data()

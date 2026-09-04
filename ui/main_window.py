@@ -17,12 +17,16 @@ from ui.pages.flights_page import FlightsPage
 from ui.pages.risk_alerts_page import RiskAlertsPage
 
 from utils.risk_alert_store import RiskAlertStore
+from ui.pages.history_page import HistoryPage
 
 
 class MainWindow(QMainWindow):
 
-    def __init__(self, current_user):
+    # =========================================================
+    # INIT
+    # =========================================================
 
+    def __init__(self, current_user):
         super().__init__()
 
         self.current_user = current_user
@@ -39,10 +43,25 @@ class MainWindow(QMainWindow):
         self.init_ui()
 
     # =========================================================
+    # ROLE / PERMISSION
+    # =========================================================
+
+    def is_admin(self):
+        """
+        Return True when the current user is an administrator.
+        """
+
+        return self.current_user.role.lower() == "admin"
+
+    # =========================================================
     # UI
     # =========================================================
 
     def init_ui(self):
+
+        # =====================================================
+        # CENTRAL WIDGET
+        # =====================================================
 
         central = QWidget()
 
@@ -136,15 +155,30 @@ class MainWindow(QMainWindow):
             "SidebarList"
         )
 
+        # -----------------------------------------------------
+        # All available menus
+        # -----------------------------------------------------
+
         menus = [
             "Dashboard",
             "Risk Profiles",
             "Flights",
             "Risk Alerts",
-            "Inspection",
-            "History",
-            "Users",
         ]
+
+        # -----------------------------------------------------
+        # Admin-only menus
+        # -----------------------------------------------------
+
+        if self.is_admin():
+            menus.extend([
+                "History",
+                "Users",
+            ])
+
+        # -----------------------------------------------------
+        # Add menus to sidebar
+        # -----------------------------------------------------
 
         for menu in menus:
 
@@ -182,17 +216,36 @@ class MainWindow(QMainWindow):
             user_line
         )
 
-        user_label = QLabel(
-            f"Logged in as\n"
-            f"{self.current_user.role}"
+        # -----------------------------------------------------
+        # Username
+        # -----------------------------------------------------
+
+        user_name_label = QLabel(
+            f"{self.current_user.full_name}"
         )
 
-        user_label.setObjectName(
+        user_name_label.setObjectName(
+            "UserNameLabel"
+        )
+
+        sidebar_layout.addWidget(
+            user_name_label
+        )
+
+        # -----------------------------------------------------
+        # Role
+        # -----------------------------------------------------
+
+        role_label = QLabel(
+            f"Role: {self.current_user.role}"
+        )
+
+        role_label.setObjectName(
             "UserLabel"
         )
 
         sidebar_layout.addWidget(
-            user_label
+            role_label
         )
 
         root_layout.addWidget(
@@ -240,11 +293,21 @@ class MainWindow(QMainWindow):
         #
         # They are NOT saved to database.
         #
-        # Multiple flights can add results to the same store.
+        # Multiple flights can add results
+        # to the same store.
 
         self.risk_alert_store = (
             RiskAlertStore()
         )
+
+        # =====================================================
+        # PAGE MAP
+        # =====================================================
+
+        # Instead of depending on hard-coded page indexes,
+        # keep a mapping between menu names and page widgets.
+
+        self.page_map = {}
 
         # =====================================================
         # DASHBOARD
@@ -254,7 +317,8 @@ class MainWindow(QMainWindow):
             DashboardPage()
         )
 
-        self.pages.addWidget(
+        self.add_page(
+            "Dashboard",
             self.dashboard_page
         )
 
@@ -262,11 +326,12 @@ class MainWindow(QMainWindow):
         # RISK PROFILES
         # =====================================================
 
-        self.risk_profile_page = (
-            RiskProfilePage()
+        self.risk_profile_page = RiskProfilePage(
+            self.current_user
         )
 
-        self.pages.addWidget(
+        self.add_page(
+            "Risk Profiles",
             self.risk_profile_page
         )
 
@@ -280,11 +345,13 @@ class MainWindow(QMainWindow):
 
         self.flights_page = (
             FlightsPage(
-                self.risk_alert_store
+                self.risk_alert_store,
+                self.current_user
             )
         )
 
-        self.pages.addWidget(
+        self.add_page(
+            "Flights",
             self.flights_page
         )
 
@@ -294,8 +361,6 @@ class MainWindow(QMainWindow):
 
         # IMPORTANT:
         # RiskAlertsPage receives the SAME store.
-        #
-        # Therefore:
         #
         # FlightsPage
         #       ↓
@@ -309,29 +374,46 @@ class MainWindow(QMainWindow):
             )
         )
 
-        self.pages.addWidget(
+        self.add_page(
+            "Risk Alerts",
             self.risk_alerts_page
         )
 
         # =====================================================
-        # TEMPORARY PAGES
+        # ADMIN-ONLY PAGES
         # =====================================================
 
-        for text in [
-            "Inspection",
-            "History",
-            "Users",
-        ]:
+        if self.is_admin():
 
-            page = (
+            # -------------------------------------------------
+            # HISTORY
+            # -------------------------------------------------
+
+            self.history_page = HistoryPage()
+
+            self.add_page(
+                "History",
+                self.history_page
+            )
+
+            # -------------------------------------------------
+            # USERS
+            # -------------------------------------------------
+
+            self.users_page = (
                 self.create_placeholder_page(
-                    text
+                    "Users"
                 )
             )
 
-            self.pages.addWidget(
-                page
+            self.add_page(
+                "Users",
+                self.users_page
             )
+
+        # =====================================================
+        # CONTENT
+        # =====================================================
 
         content_layout.addWidget(
             self.pages
@@ -349,11 +431,15 @@ class MainWindow(QMainWindow):
             self.on_page_changed
         )
 
-        # Start with Dashboard
+        # =====================================================
+        # START WITH DASHBOARD
+        # =====================================================
 
-        self.sidebar.setCurrentRow(
-            0
-        )
+        if self.sidebar.count() > 0:
+
+            self.sidebar.setCurrentRow(
+                0
+            )
 
         # =====================================================
         # STATUS BAR
@@ -363,7 +449,8 @@ class MainWindow(QMainWindow):
 
         status.showMessage(
             f"Logged in as "
-            f"{self.current_user.role}"
+            f"{self.current_user.full_name} "
+            f"({self.current_user.role})"
         )
 
         self.setStatusBar(
@@ -394,33 +481,26 @@ class MainWindow(QMainWindow):
            ================================================= */
 
         QFrame#Sidebar {
-
             background: #0f172a;
-
             border: none;
         }
 
 
+        /* =================================================
+           Application title
+           ================================================= */
+
         QLabel#AppTitle {
-
             color: #ffffff;
-
             font-size: 18px;
-
             font-weight: 700;
-
             letter-spacing: 1px;
         }
 
-
         QLabel#AppSubtitle {
-
             color: #64748b;
-
             font-size: 10px;
-
             font-weight: 600;
-
             letter-spacing: 2px;
         }
 
@@ -430,43 +510,27 @@ class MainWindow(QMainWindow):
            ================================================= */
 
         QListWidget#SidebarList {
-
             background: transparent;
-
             border: none;
-
             outline: none;
-
             color: #cbd5e1;
-
             font-size: 13px;
         }
 
-
         QListWidget#SidebarList::item {
-
             padding: 13px 14px;
-
             margin: 3px 0;
-
             border-radius: 8px;
         }
 
-
         QListWidget#SidebarList::item:hover {
-
             background: #1e293b;
-
             color: #ffffff;
         }
 
-
         QListWidget#SidebarList::item:selected {
-
             background: #2563eb;
-
             color: #ffffff;
-
             font-weight: 600;
         }
 
@@ -476,22 +540,22 @@ class MainWindow(QMainWindow):
            ================================================= */
 
         QFrame#UserLine {
-
             color: #1e293b;
-
             background: #1e293b;
-
             max-height: 1px;
         }
 
+        QLabel#UserNameLabel {
+            color: #e2e8f0;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 4px 4px 0 4px;
+        }
 
         QLabel#UserLabel {
-
             color: #94a3b8;
-
             font-size: 11px;
-
-            padding: 8px 4px;
+            padding: 4px;
         }
 
 
@@ -500,17 +564,33 @@ class MainWindow(QMainWindow):
            ================================================= */
 
         QStatusBar {
-
             background: #ffffff;
-
             color: #64748b;
-
             border-top: 1px solid #e2e8f0;
-
             font-size: 11px;
         }
 
         """)
+
+    # =========================================================
+    # ADD PAGE
+    # =========================================================
+
+    def add_page(
+        self,
+        name,
+        page
+    ):
+        """
+        Add a page to the stacked widget
+        and register it in page_map.
+        """
+
+        self.page_map[name] = page
+
+        self.pages.addWidget(
+            page
+        )
 
     # =========================================================
     # PLACEHOLDER PAGE
@@ -552,10 +632,65 @@ class MainWindow(QMainWindow):
 
         return page
 
-    def on_page_changed(self, index):
+    # =========================================================
+    # PAGE CHANGED
+    # =========================================================
 
-        self.pages.setCurrentIndex(index)
+    def on_page_changed(
+        self,
+        index
+    ):
+        if index < 0:
+            return
 
-        # Risk Alerts page
-        if index == 3:
+        # -----------------------------------------------------
+        # Get selected menu
+        # -----------------------------------------------------
+
+        item = self.sidebar.item(index)
+
+        if item is None:
+            return
+
+        page_name = item.text()
+
+        # -----------------------------------------------------
+        # Permission protection
+        # -----------------------------------------------------
+
+        # User accounts should never be able to access
+        # History or Users.
+        if (
+            page_name in ("History", "Users")
+            and not self.is_admin()
+        ):
+            return
+
+        # -----------------------------------------------------
+        # Find page
+        # -----------------------------------------------------
+
+        page = self.page_map.get(page_name)
+
+        if page is None:
+            return
+
+        # -----------------------------------------------------
+        # Show page
+        # -----------------------------------------------------
+
+        self.pages.setCurrentWidget(page)
+
+        # -----------------------------------------------------
+        # History refresh
+        # -----------------------------------------------------
+
+        if page_name == "History":
+            self.history_page.load_data()
+
+        # -----------------------------------------------------
+        # Risk Alerts refresh
+        # -----------------------------------------------------
+
+        if page_name == "Risk Alerts":
             self.risk_alerts_page.refresh()
