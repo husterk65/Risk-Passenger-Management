@@ -903,6 +903,10 @@ class FlightsPage(QWidget):
                     False
                 )
 
+                item.setTextAlignment(
+                    Qt.AlignmentFlag.AlignCenter
+                )
+
                 row.append(
                     item
                 )

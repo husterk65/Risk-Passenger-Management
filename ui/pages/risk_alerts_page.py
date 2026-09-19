@@ -1159,7 +1159,7 @@ class RiskAlertsPage(QWidget):
                 item.setTextAlignment(
                     Qt.AlignmentFlag.AlignVCenter
                     |
-                    Qt.AlignmentFlag.AlignLeft
+                    Qt.AlignmentFlag.AlignCenter
                 )
 
                 self.table.setItem(

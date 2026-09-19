@@ -344,6 +344,11 @@ class HistoryPage(QWidget):
             True
         )
 
+        self.table.sortByColumn(
+            0,
+            Qt.SortOrder.DescendingOrder
+        )
+
         # Alternating rows
 
         self.table.setAlternatingRowColors(
@@ -502,6 +507,9 @@ class HistoryPage(QWidget):
             for item in row:
                 item.setForeground(
                     Qt.GlobalColor.black
+                )
+                item.setTextAlignment(
+                    Qt.AlignmentFlag.AlignCenter
                 )
 
             self.model.appendRow(

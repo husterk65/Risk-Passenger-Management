@@ -1,3 +1,4 @@
+from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QStandardItem
 
 class TableBuilder:
@@ -30,6 +31,9 @@ class TableBuilder:
                 0,
                 QStandardItem(str(row_index))
             )
+            model.item(row_index - 1, 0).setTextAlignment(
+                Qt.AlignmentFlag.AlignCenter
+            )
 
             # Data
             for column_index, column in enumerate(columns, start=1):
@@ -42,6 +46,10 @@ class TableBuilder:
 
                 item = QStandardItem(
                     "" if value is None else str(value)
+                )
+
+                item.setTextAlignment(
+                    Qt.AlignmentFlag.AlignCenter
                 )
 
                 model.setItem(

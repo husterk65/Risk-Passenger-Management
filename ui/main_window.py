@@ -15,6 +15,7 @@ from ui.pages.dashboard_page import DashboardPage
 from ui.pages.risk_profile_page import RiskProfilePage
 from ui.pages.flights_page import FlightsPage
 from ui.pages.risk_alerts_page import RiskAlertsPage
+from ui.pages.user_management_page import UserManagementPage
 
 from utils.risk_alert_store import RiskAlertStore
 from ui.pages.history_page import HistoryPage
@@ -400,16 +401,10 @@ class MainWindow(QMainWindow):
             # USERS
             # -------------------------------------------------
 
-            self.users_page = (
-                self.create_placeholder_page(
-                    "Users"
-                )
+            self.users_page = UserManagementPage(
+                self.current_user
             )
-
-            self.add_page(
-                "Users",
-                self.users_page
-            )
+            self.add_page("Users", self.users_page)
 
         # =====================================================
         # CONTENT
