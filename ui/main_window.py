@@ -351,6 +351,11 @@ class MainWindow(QMainWindow):
             )
         )
 
+        self.dashboard_page.set_runtime_sources(
+            self.flights_page,
+            self.risk_alert_store
+        )
+
         self.add_page(
             "Flights",
             self.flights_page
@@ -676,6 +681,12 @@ class MainWindow(QMainWindow):
 
         self.pages.setCurrentWidget(page)
 
+        # -----------------------------------------------------
+        # Dashboard refresh
+        # -----------------------------------------------------
+
+        if page_name == "Dashboard":
+            self.dashboard_page.refresh()
         # -----------------------------------------------------
         # History refresh
         # -----------------------------------------------------
